@@ -1,5 +1,46 @@
 #!/bin/bash
 
+scriptDir="$(dirname $0)"
+
+function preprocess {
+  tr '\n' ' ' | tr '#' ' ' | tr '*' ' ' | perl -pe 's|---.*?---||g' | tr '-' ' ' | perl -pe 's|```.*?```||g' | perl -pe 's|<script.*?</script>||g' | perl -pe 's|&nbsp;||g' | perl -pe 's|&lt;||g' | perl -pe 's|&gt;||g' | perl -pe 's|<code.*?</code>||g' | perl -pe 's|<form.*?</form>||g' | perl -pe 's|<style.*?</style>||g' | perl -pe 's|<[/a-zA-Z].*?>||g' | perl -pe 's|`.*?`||g' | perl -pe 's|]\(.*?\)| |g'
+}
+
+function checkFile {
+  cat "$1" | preprocess | aspell -a --encoding=utf-8 --lang=en-us --add-extra-dicts "$(dirname $0)/localDictionary.en.pws" | grep -v '^[\*@]' | grep -v '^$' | cut -f2 -d ' '
+}
+
+function changedFiles {
+  git show --pretty="format:" --name-only $(git rev-list HEAD | head -n 1 | tail -n 1) | grep '\.md$'
+}
+
+function check {
+  while read file; do
+    echo 
+    echo "checking $file"
+    echo
+    for word in `checkFile "$file"`; do
+      echo "$word"
+    done
+  done
+}
+
+# report="$(changedFiles . | check | sed 's/$/<br>/' )"
+
+report="$(changedFiles . | check )"
+
+if [[ "$(echo -n "$report" | grep -v '^<br>$' | grep -v '^checking ')" = '' ]]; then
+  echo spell check passed!
+  exit 0;
+else
+  echo "$report"
+  exit 1;
+fi
+
+exit 0;
+
+# =====
+
 MARKDOWN_FILES_CHANGED=`(git diff --name-only $TRAVIS_COMMIT_RANGE || true) | grep .md`
 
 echo "Running spelling check for files:"
@@ -28,6 +69,8 @@ TEXT_CONTENT_WITHOUT_METADATA=`echo "$TEXT_CONTENT_WITHOUT_METADATA" | sed -E 's
 MISSPELLED=`echo "$TEXT_CONTENT_WITHOUT_METADATA" | aspell --lang=en --encoding=utf-8 --personal=./localDictionary.en.pws list | sort -u`
 
 NB_MISSPELLED=`echo "$MISSPELLED" | wc -l`
+
+echo "MISSPELLED is $MISSPELLED"
 
 if [ "$NB_MISSPELLED" -gt 0 ]
 then
