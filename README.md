@@ -6,5 +6,3 @@ The basic way to spell check a file is:
 
 Using a local dictionary to allow through local words.
 `cat some_text.md | aspell -a --personal=./localDictionary.en.pws | grep -v '^[\*@]' | grep -v '^$' | cut -f2 -d ' '`
-
-Force a spelling mitsake.
