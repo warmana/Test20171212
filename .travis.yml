@@ -6,3 +6,8 @@ addons:
 
 script:
   scripts/checkSpelling.sh
+
+notifications:
+  email:
+    recipients:
+      - warmana@libertymail.net
